@@ -1,10 +1,12 @@
-from modal import Stub, Secret
+from modal import Stub, Secret, Image
 
 stub = Stub()
+image = Image.debian_slim().pip_install( "requests")
 
-@stub.function(secret=[Secret.from_name("discord-bot")])
+@stub.function(image=image, secrets=[Secret.from_name("discord-bot")])
 async def reg_command():
     import requests
+    import os
     
     guild_id = os.getenv("GUILD_ID")
     app_id = os.getenv("APP_ID")

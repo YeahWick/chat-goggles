@@ -38,7 +38,7 @@ def flask_app():
     @web_app.after_request
     def after_request(response):
         timestamp = strftime('[%Y-%b-%d %H:%M]')
-        print('%s %s %s %s %s %s', timestamp, request.remote_addr, request.method, request.scheme, request.full_path, response.status)
+        print(f"{timestamp}, remote add: {request.remote_addr}, method: {request.method}, scheme: {request.scheme}, path: {request.full_path}, status: {response.status}")
         return response
 
     return web_app
