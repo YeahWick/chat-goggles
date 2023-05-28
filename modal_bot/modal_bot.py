@@ -11,6 +11,7 @@ def flask_app():
     from discord_interactions import verify_key_decorator, InteractionType, InteractionResponseType
     from os import getenv
     from time import strftime
+    import json, sys
 
     web_app = Flask(__name__)
 
@@ -23,15 +24,12 @@ def flask_app():
     @web_app.post('/interactions')
     @verify_key_decorator(CLIENT_PUBLIC_KEY)
     def interactions():
-        if request.json["type"] == 1:
-            return jsonify({
-                "type": 1
-            })
         if request.json['type'] == InteractionType.APPLICATION_COMMAND:
+            msgs = " ".join([v['content'] for k,v in request.json['data']['resolved']['messages'].items()])
             return jsonify({
                 'type': InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 'data': {
-                    'content': 'Hello world'
+                    'content': f"responding to: {msgs}"
                 }
             })
 
