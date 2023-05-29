@@ -1,7 +1,13 @@
-from modal import Image, Stub, wsgi_app, Secret
+from modal import Image, Stub, wsgi_app, Secret, is_local, Dict
+from os import getenv
 
 stub = Stub("bot-v2")
 image = Image.debian_slim().pip_install( "flask", "discord_interactions")
+
+# Set environment
+if is_local():
+    env = getenv("DISCORD_BOT_ENV")
+    stub.data_dict = Dict({"env": env})
 
 @stub.function(image=image,
                secret=Secret.from_name("discord-bot"))
@@ -14,8 +20,19 @@ def flask_app():
     import json, sys
 
     web_app = Flask(__name__)
+    environment = stub.app.data_dict["env"]
+    print(f"env is: {environment}")
 
-    CLIENT_PUBLIC_KEY = getenv('CLIENT_PUBLIC_KEY')
+    app_config = dict(
+        dev=dict(
+            CLIENT_PUBLIC_KEY=getenv('CLIENT_PUBLIC_KEY')
+        ),
+        prod=dict(
+            CLIENT_PUBLIC_KEY=getenv('CLIENT_PUBLIC_KEY_PROD')
+        )
+    )
+
+    CLIENT_PUBLIC_KEY = app_config.get(environment).get('CLIENT_PUBLIC_KEY')
 
     @web_app.get("/")
     def home():
@@ -32,6 +49,7 @@ def flask_app():
                     'content': f"responding to: {msgs}"
                 }
             })
+            #call some other modal function to return render
 
     @web_app.after_request
     def after_request(response):

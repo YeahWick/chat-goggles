@@ -4,18 +4,33 @@ stub = Stub()
 image = Image.debian_slim().pip_install( "requests")
 
 @stub.function(image=image, secrets=[Secret.from_name("discord-bot")])
-async def reg_command():
+async def reg_command(environment: str):
     import requests
     import os
     
     guild_id = os.getenv("GUILD_ID")
-    app_id = os.getenv("APP_ID")
-    bot_token = os.getenv("BOT_TOKEN")
+
+    app_config = dict(
+        dev=dict(
+            app_id=os.getenv("APP_ID"),
+            bot_token=os.getenv("BOT_TOKEN"),
+            name_suffix="-dev"
+        ),
+        prod=dict(
+            app_id=os.getenv("APP_ID_PROD"),
+            bot_token=os.getenv("BOT_TOKEN_PROD"),
+            name_suffix=""
+        )
+    )
+    app_id = app_config.get(environment).get("app_id")
+    name_suffix = app_config.get(environment).get("name_suffix")
+    bot_token = app_config.get(environment).get("bot_token")
+
     
     url = f"https://discord.com/api/v10/applications/{app_id}/guilds/{guild_id}/commands"
     
     json = {
-        "name": "Message Send",
+        "name": f"Message Send{name_suffix}",
         "type": 3
     }
     
