@@ -10,13 +10,13 @@ def get_pretrained():
     model = "tiiuae/falcon-7b-instruct"
     AutoTokenizer.from_pretrained(model, trust_remote_code=True, revision="9cbb1610be271fd06576e7e00f60e75612d53a4d")
 
-stub = Stub()
+stub = Stub('llm-1')
 image = Image.debian_slim().pip_install("transformers", "torch", "einops",
                                         "huggingface_hub").run_function(download_model).pip_install("accelerate").run_function(get_pretrained)
 
 
 @stub.function(image=image, gpu="A100")
-async def llm_command():
+def llm_command(prompt: str, callback):
     from transformers import AutoTokenizer, AutoModelForCausalLM
     import transformers
     import torch
@@ -33,13 +33,14 @@ async def llm_command():
         device_map="auto",
     )
     sequences = pipeline(
-       "Please write out some code to post images with an interactions discord bot in python",
+        prompt,
         max_length=400,
         do_sample=True,
         top_k=10,
         num_return_sequences=1,
-        #eos_token_id=tokenizer.eos_token_id,
-        eos_token_id=11, #bug see https://huggingface.co/TheBloke/falcon-40b-instruct-GPTQ/discussions/8
+        eos_token_id=tokenizer.eos_token_id,
+        #eos_token_id=11, #bug see https://huggingface.co/TheBloke/falcon-40b-instruct-GPTQ/discussions/8
     )
     for seq in sequences:
-        print(f"Result: {seq['generated_text']}")
+        #print(f"Result: {seq['generated_text']}")
+        callback.spawn(seq['generated_text'])
