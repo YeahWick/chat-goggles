@@ -6,7 +6,7 @@ def download_model():
     # Set gpu_layers to the number of layers to offload to GPU. Set to 0 if no GPU acceleration is available on your system.
     llm = AutoModelForCausalLM.from_pretrained("TheBloke/Xwin-LM-13B-V0.1-GGUF", model_file="xwin-lm-13b-v0.1.Q4_K_M.gguf", model_type="llama")# , gpu_layers=50)
 
-stub = Stub('robin')
+stub = Stub('xwin_lm')
 image = Image.debian_slim().pip_install("ctransformers").run_function(download_model)
 
 @stub.function(image=image)
