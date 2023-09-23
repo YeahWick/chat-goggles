@@ -13,4 +13,4 @@ image = Image.debian_slim().pip_install("ctransformers").run_function(download_m
 def entry_function():
     from ctransformers import AutoModelForCausalLM
     llm = AutoModelForCausalLM.from_pretrained("TheBloke/Xwin-LM-13B-V0.1-GGUF", model_file="xwin-lm-13b-v0.1.Q4_K_M.gguf", model_type="llama", local_files_only=True)# , gpu_layers=50)
-    print(llm("Write bash function to change a aws ec2 tag"))
+    print(llm("Here is a bash function that will change a aws ec2 tag", max_new_tokens=400))
