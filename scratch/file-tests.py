@@ -9,7 +9,8 @@ def download_model():
     print("build image here")
 
 stub = Stub(stub_name)
-image = Image.debian_slim().copy_local_file("lib.py","/root/lib.py")
+image = Image.debian_slim().copy_local_file("lib.py","/root/lib.py")\
+    .apt_install("curl").run_commands(["curl -O http://google.com/robots.txt"])
 
 @stub.function(image=image)
 def entry_function():
