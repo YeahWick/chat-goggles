@@ -1,16 +1,19 @@
-from modal import Stub, Volume
+from modal import Stub, Image, Volume
 
 stub = Stub('volume-test')
 stub.volume = Volume.persisted("models-test1")
 
-@stub.function(volumes={"/models": stub.volume})
-def f():
-    with open("/models/bar.txt", "w") as f:
-        f.write("hello")
+image = Image.debian_slim().pip_install(["huggingface_hub", "ctransformers"])
+
+@stub.function(image=image, volumes={"/models": stub.volume})
+def download(repo_name: str, file_name: str):
+    from huggingface_hub import cached_download, hf_hub_url
+    cached_download(hf_hub_url(repo_id=repo_name, filename=file_name), force_filename=f"/models/{file_name}")
     stub.volume.commit()  # Persist changes
 
-@stub.function(volumes={"/models": stub.volume})
-def g():
-    stub.volume.reload()  # Fetch latest changes
-    with open("/models/bar.txt", "r") as f:
-        print(f.read())
+@stub.function(image=image, volumes={"/models": stub.volume})
+def invoke(repo_name: str, file_name: str, prompt: str):
+    from ctransformers import AutoModelForCausalLM
+    stub.volume.reload()
+    llm = AutoModelForCausalLM.from_pretrained(f"/models/{file_name}", model_type="falcon")
+    print(llm(f"{prompt}", max_new_tokens=400))
