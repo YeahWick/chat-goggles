@@ -1,4 +1,4 @@
-from modal import Stub, Image, Volume
+from modal import Stub, Image, Volume, Function
 from typing import NamedTuple
 
 # Define NamedTuple classes for download and invoke arguments
@@ -42,7 +42,7 @@ def download(args: DownloadArgs):
     stub.volume.commit()
 
 @stub.function(image=image, volumes={vol_mnt: stub.volume}, timeout=1800)
-def invoke(args: InvokeArgs):
+def invoke(args: InvokeArgs, callback: Function):
     from ctransformers import AutoModelForCausalLM
     import os
 
@@ -53,7 +53,9 @@ def invoke(args: InvokeArgs):
         stub.volume.reload()
 
     llm = AutoModelForCausalLM.from_pretrained(f"{vol_mnt}/{args.repo_name}/{args.file_name}", model_type=args.model_type)
-    print(llm(args.prompt, max_new_tokens=max_tokens))
+    output = llm(args.prompt, max_new_tokens=max_tokens)
+    print(output)
+    callback.spawn(output)
 
 @stub.function(image=image, volumes={vol_mnt: stub.volume})
 def list_files():
