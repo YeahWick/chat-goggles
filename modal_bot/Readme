@@ -1,5 +1,0 @@
-Deploy the app with
-
-* modal run register_command.py
-
-DISCORD_BOT_ENV=prod modal deploy modal_bot.py
