@@ -1,0 +1,1 @@
+modal run run_model/invoke.py --file-name mistral-7b-openorca.Q3_K_M.gguf --repo-name TheBloke/Mistral-7B-OpenOrca-GGUF --prompt "What is the air speed velocity of a fully laden swallow?" --model-type misral
