@@ -1,4 +1,4 @@
-from modal import Stub, Image, Volume, Function
+from modal import Stub, Image, Volume, Function, Mount
 from dataclasses import dataclass
 
 # Define NamedTuple classes for download and invoke arguments
@@ -27,7 +27,7 @@ stub.volume = Volume.persisted("models")
 vol_mnt = "/models"
 max_tokens = 350
 
-image = Image.debian_slim().pip_install(["huggingface_hub", "ctransformers"])
+image = Image.debian_slim().env(dict(CMAKE_ARGS="-DLLAMA_CUBLAS=on")).pip_install(["huggingface_hub", "llama-cpp-python"])
 
 @stub.function(image=image, volumes={vol_mnt: stub.volume})
 def download(args: DownloadArgs):
@@ -46,7 +46,7 @@ def download(args: DownloadArgs):
 
 @stub.function(image=image, volumes={vol_mnt: stub.volume}, timeout=1800)
 def invoke(args: InvokeArgs, callback: Function):
-    from ctransformers import AutoModelForCausalLM
+    from llama_cpp import Llama
     import os
 
     stub.volume.reload()
@@ -55,14 +55,30 @@ def invoke(args: InvokeArgs, callback: Function):
         download.remote(DownloadArgs(repo_name=args.repo_name, file_name=args.file_name))
         stub.volume.reload()
 
-    llm = AutoModelForCausalLM.from_pretrained(f"{vol_mnt}/{args.repo_name_dir}/{args.file_name}", model_type=args.model_type, context_length=args.context_length)
-    output = llm(args.prompt, max_new_tokens=max_tokens)
-    callback.spawn(output)
+    llm = Llama(f"{vol_mnt}/{args.repo_name_dir}/{args.file_name}")
+    output = llm(args.prompt, max_tokens=max_tokens)
+    if callback is None:
+        print(output)
+    else:
+        callback.spawn(output["choices"][0]["text"])
+
 
 @stub.function(image=image, volumes={vol_mnt: stub.volume})
 def list_files():
     import os
+    stub.volume.reload()
     print(f"{vol_mnt}")
-    for f in os.listdir(f"{vol_mnt}"):
-        s = os.path.getsize(f"{vol_mnt}/{f}")
-        print(f"{f} {s}")
+    def traverse_directory(directory):
+        for item in os.listdir(directory):
+            path = os.path.join(directory, item)
+            if os.path.isfile(path):
+                size = os.path.getsize(path)
+                print(f"{directory}/{item} {size}")
+            elif os.path.isdir(path):
+                traverse_directory(path)
+
+    traverse_directory(vol_mnt)
+
+@stub.local_entrypoint()
+def main(repo_name: str, file_name: str, prompt: str, model_type: str, context_length: int = 512):
+    invoke.remote(InvokeArgs(repo_name, file_name, prompt, model_type, context_length), None)
