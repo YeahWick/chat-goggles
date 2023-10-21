@@ -1,25 +1,5 @@
 from modal import Stub, Image, Volume, Function, Mount
-from dataclasses import dataclass
-
-# Define NamedTuple classes for download and invoke arguments
-@dataclass
-class DownloadArgs():
-    repo_name: str
-    file_name: str
-
-    def __post_init__(self):
-        self.repo_name_dir = self.repo_name.replace("/", "-")
-
-@dataclass
-class InvokeArgs():
-    repo_name: str
-    file_name: str
-    prompt: str
-    model_type: str
-    context_length: int = 512
-
-    def __post_init__(self):
-        self.repo_name_dir = self.repo_name.replace("/", "-")
+from ftypes import DownloadArgs, InvokeArgs
 
 stub = Stub('invoke')
 stub.volume = Volume.persisted("models")
@@ -79,6 +59,3 @@ def list_files():
 
     traverse_directory(vol_mnt)
 
-@stub.local_entrypoint()
-def main(repo_name: str, file_name: str, prompt: str, model_type: str, context_length: int = 512):
-    invoke.remote(InvokeArgs(repo_name, file_name, prompt, model_type, context_length), None)
