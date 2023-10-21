@@ -8,7 +8,7 @@ packages = [{include = "chat_goggles"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-modal = "^0"
+modal = "^0.55"
 
 
 [build-system]
