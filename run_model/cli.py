@@ -17,6 +17,11 @@ def invoke(repo_name: str, file_name: str, prompt: str, model_type: str, context
     invoke_f.remote(InvokeArgs(repo_name, file_name, prompt, model_type, context_length), None)
 
 @cli.command()
+def list_files():
+    invoke_ls = Function.lookup("invoke","list_files")
+    print(invoke_ls.remote())
+
+@cli.command()
 @click.option("--repo-name", "repo_name", prompt="Enter repo name", help="Name of the repository")
 @click.option("--file-name", "file_name", prompt="Enter file name", help="Name of the file")
 @click.option("--prompt", prompt="Enter prompt", help="Prompt for the model")

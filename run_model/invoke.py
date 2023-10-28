@@ -75,15 +75,18 @@ class RunQueue():
 def list_files():
     import os
     stub.volume.reload()
-    print(f"{vol_mnt}")
-    def traverse_directory(directory):
+    return_strs = []
+    return_strs.append(f"{vol_mnt}\n")
+
+    def traverse_directory(directory, return_strs):
         for item in os.listdir(directory):
             path = os.path.join(directory, item)
             if os.path.isfile(path):
                 size = os.path.getsize(path)
-                print(f"{directory}/{item} {size}")
+                return_strs.append(f"{directory}/{item} {size}\n")
             elif os.path.isdir(path):
-                traverse_directory(path)
+                traverse_directory(path, return_strs)
 
-    traverse_directory(vol_mnt)
+    traverse_directory(vol_mnt, return_strs)
+    return ''.join(return_strs)
 
