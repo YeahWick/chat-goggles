@@ -31,12 +31,12 @@ def invoke(args: InvokeArgs, callback: Function):
     max_tokens = 350
 
     stub.volume.reload()
-    file_path = f"{vol_mnt}/{args.repo_name_dir}/{args.file_name}"
+    file_path = f"{vol_mnt}/{args.repo_name}/{args.file_name}"
     if not os.path.isfile(file_path):
         download.remote(DownloadArgs(repo_name=args.repo_name, file_name=args.file_name))
         stub.volume.reload()
 
-    llm = Llama(f"{vol_mnt}/{args.repo_name_dir}/{args.file_name}")
+    llm = Llama(f"{vol_mnt}/{args.repo_name}/{args.file_name}")
     output = llm(args.prompt, max_tokens=max_tokens)
     if callback is None:
         print(output)
