@@ -1,8 +1,9 @@
-from modal import Stub, Image, Volume, Function, Mount
+from modal import Stub, Image, Volume, Function, Queue, method
 from ftypes import DownloadArgs, InvokeArgs
 
 stub = Stub('invoke')
 stub.volume = Volume.persisted("models")
+stub.queue = Queue.persisted("invoke-queue")
 
 vol_mnt = "/models"
 max_tokens = 350
@@ -42,6 +43,37 @@ def invoke(args: InvokeArgs, callback: Function):
     else:
         callback.spawn(output["choices"][0]["text"])
 
+@stub.cls(image=image, volumes={vol_mnt: stub.volume}, timeout=1800)
+class RunQueue():
+    def __enter__(self):
+        from llama_cpp import Llama
+        import os
+        # TODO fix how this gets which model, right now
+        # it just assumes all models within the queue are the same.
+        if (stub.queue.len() > 0):
+            args = stub.queue.get()
+            stub.volume.reload()
+            file_path = f"{vol_mnt}/{args.repo_name_dir}/{args.file_name}"
+            if not os.path.isfile(file_path):
+                download.remote(DownloadArgs(repo_name=args.repo_name, file_name=args.file_name))
+                stub.volume.reload()
+            self.llm = Llama(f"{vol_mnt}/{args.repo_name_dir}/{args.file_name}")
+            output = self.llm(args.prompt, max_tokens=max_tokens)
+            print(output) #TODO move this. Needs an invoke fn
+
+    @method()
+    def run_queue(self):
+        while (stub.queue.len() > 0):
+            args = stub.queue.get()
+
+            output = self.llm(args.prompt, max_tokens=max_tokens)
+
+            #TODO consider callback
+            callback = None
+            if callback is None:
+                print(output)
+            else:
+                callback.spawn(output["choices"][0]["text"])
 
 @stub.function(image=image, volumes={vol_mnt: stub.volume})
 def list_files():
