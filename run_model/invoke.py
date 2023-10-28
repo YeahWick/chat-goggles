@@ -6,7 +6,6 @@ stub.volume = Volume.persisted("models")
 stub.queue = Queue.persisted("invoke-queue")
 
 vol_mnt = "/models"
-max_tokens = 350
 
 image = Image.debian_slim().env(dict(CMAKE_ARGS="-DLLAMA_CUBLAS=on")).pip_install(["huggingface_hub", "llama-cpp-python"])
 
@@ -29,6 +28,7 @@ def download(args: DownloadArgs):
 def invoke(args: InvokeArgs, callback: Function):
     from llama_cpp import Llama
     import os
+    max_tokens = 350
 
     stub.volume.reload()
     file_path = f"{vol_mnt}/{args.repo_name_dir}/{args.file_name}"
@@ -45,12 +45,13 @@ def invoke(args: InvokeArgs, callback: Function):
 
 @stub.cls(image=image, volumes={vol_mnt: stub.volume}, timeout=1800)
 class RunQueue():
+    # TODO fix how this gets which model, right now
+    # it just assumes all models within the queue are the same.
     def __enter__(self):
         from llama_cpp import Llama
         import os
-        # TODO fix how this gets which model, right now
-        # it just assumes all models within the queue are the same.
-        if (stub.queue.len() > 0):
+
+        if stub.queue.len() > 0:
             args = stub.queue.get()
             stub.volume.reload()
             file_path = f"{vol_mnt}/{args.repo_name_dir}/{args.file_name}"
@@ -58,22 +59,17 @@ class RunQueue():
                 download.remote(DownloadArgs(repo_name=args.repo_name, file_name=args.file_name))
                 stub.volume.reload()
             self.llm = Llama(f"{vol_mnt}/{args.repo_name_dir}/{args.file_name}")
-            output = self.llm(args.prompt, max_tokens=max_tokens)
-            print(output) #TODO move this. Needs an invoke fn
+            self.invoke_llm(args.prompt, max_tokens)
+
+    def invoke_llm(self, prompt, max_tokens):
+        output = self.llm(prompt, max_tokens=max_tokens)
+        print(output)
 
     @method()
     def run_queue(self):
-        while (stub.queue.len() > 0):
+        while stub.queue.len() > 0:
             args = stub.queue.get()
-
-            output = self.llm(args.prompt, max_tokens=max_tokens)
-
-            #TODO consider callback
-            callback = None
-            if callback is None:
-                print(output)
-            else:
-                callback.spawn(output["choices"][0]["text"])
+            self.invoke_llm(args.prompt, max_tokens)
 
 @stub.function(image=image, volumes={vol_mnt: stub.volume})
 def list_files():
