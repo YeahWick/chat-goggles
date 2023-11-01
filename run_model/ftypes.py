@@ -14,6 +14,7 @@ class InvokeArgs():
     repo_name: str
     file_name: str
     prompt: str
+    target: str
     model_type: str
     context_length: int = 512
 

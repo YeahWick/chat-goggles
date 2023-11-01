@@ -1,5 +1,5 @@
 from modal import Stub, Image, Volume, Function, Queue, method
-import ftypes
+from ftypes import InvokeArgs
 
 stub = Stub('datasets')
 stub.volume = Volume.persisted("datasets")
@@ -31,16 +31,22 @@ def fetch_data(dataset_repo, dataset_name, split):
     from datasets import load_dataset, DownloadConfig
     stub.volume.reload()
     load_dataset(dataset_repo, dataset_name, cache_dir = f"{vol_mnt}/", download_config=DownloadConfig(cache_dir=f"{vol_mnt}/downloads/"))
-    stub.volume.commit()
+    stub.volume.commit() # Commit to file volume before using the files
     huggingface_dataset = load_dataset(dataset_repo, dataset_name, cache_dir = f"{vol_mnt}/", download_config=DownloadConfig(cache_dir=f"{vol_mnt}/downloads/"))
     return DataIterator(huggingface_dataset[split])
 
 @stub.function(image=image, volumes={vol_mnt: stub.volume})
 def put_queue(dataset_repo, dataset_name):
     data_it = fetch_data(dataset_repo, dataset_name,"train")
+    get_prompt = lambda l: l['inputs']+"\n"+'\n'.join(l['multiple_choice_targets'])+"\n\nTarget proverb:"
+    count = 0
     for item in data_it:
-        print(item)
-        break
+        iv = InvokeArgs(repo_name="TheBloke/zephyr-7B-beta-GGUF", file_name="zephyr-7b-beta.Q4_0.gguf", prompt=get_prompt(item), target=item['targets'][0], model_type="mistral")
+        print(iv)
+        stub.queue.put(iv)
+        count += 1
+        if count > 6:
+            break
 
 @stub.local_entrypoint()
 def main():
