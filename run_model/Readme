@@ -1,0 +1,3 @@
+modal run dataset.py
+modal deploy invoke.py
+python cli.py run-queue
