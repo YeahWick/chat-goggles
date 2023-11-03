@@ -7,7 +7,7 @@ stub.queue = Queue.persisted("invoke-queue")
 
 vol_mnt = "/models"
 
-image = Image.debian_slim().pip_install(["huggingface_hub", "ctranslate2", "torch", "transformers"])
+image = Image.debian_slim().pip_install(["huggingface_hub", "ctranslate2", "torch", "transformers", "accelerate"])
 
 
 
@@ -110,7 +110,7 @@ def download(args: DownloadArgs):
                 gc.collect()
 
     converter = TransformersConverter(args.repo_name, low_cpu_mem_usage=True)
-    converter.convert(Path(f"{target_dir}/converted").as_posix())
+    converter.convert(Path(f"{target_dir}/converted").as_posix(), quantization="int8")
     stub.volume.commit()
 
 @stub.function(image=image, volumes={vol_mnt: stub.volume}, timeout=1800)
@@ -125,14 +125,22 @@ def invoke(args: InvokeArgs, callback: Function):
         download.remote(DownloadArgs(repo_name=args.repo_name, file_name=args.file_name))
         stub.volume.reload()
 
-    translator = Generator(f"{vol_mnt}/{args.repo_name}/converted")
+    translator = Generator(f"{vol_mnt}/{args.repo_name}/converted", compute_type="int8")
     tokenizer = AutoTokenizer.from_pretrained(args.repo_name) #TODO cache this too
     prompt_tokenized = tokenizer.convert_ids_to_tokens(
             tokenizer.encode(args.prompt)
         )
+    print("call 1")
     output = translator.generate_batch([prompt_tokenized], max_length=args.context_length)
+    target = output[0]
+    print(output[0])
+    print("call 2")
+    output = translator.generate_batch([prompt_tokenized], max_length=args.context_length)
+    target = output[0]
+    print(output[0])
+    print_out = tokenizer.decode(tokenizer.convert_tokens_to_ids(target.sequences[0]), skip_special_tokens=True)
     if callback is None:
-        print(output)
+        print(print_out)
     else:
         callback.spawn(output["choices"][0]["text"])
 
