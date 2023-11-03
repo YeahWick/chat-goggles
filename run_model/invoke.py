@@ -110,15 +110,19 @@ def download(args: DownloadArgs):
                 gc.collect()
 
     converter = TransformersConverter(args.repo_name, low_cpu_mem_usage=True)
-    converter.convert(Path(f"{target_dir}/converted").as_posix(), quantization="int8")
+    converter.convert(Path(f"{target_dir}/converted").as_posix())
     stub.volume.commit()
 
-@stub.function(image=image, volumes={vol_mnt: stub.volume}, timeout=1800)
+@stub.function(image=image, gpu="A100", volumes={vol_mnt: stub.volume}, timeout=1800)
+#@stub.function(image=image, volumes={vol_mnt: stub.volume}, timeout=1800)
 def invoke(args: InvokeArgs, callback: Function):
     from ctranslate2 import Generator
+    import ctranslate2
     from transformers import AutoTokenizer
     import os
+    import logging
 
+    ctranslate2.set_log_level(logging.INFO)
     stub.volume.reload()
     file_path = f"{vol_mnt}/{args.repo_name}"
     if not os.path.isdir(f"{file_path}/converted"):
